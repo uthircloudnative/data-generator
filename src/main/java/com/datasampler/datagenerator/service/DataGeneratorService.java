@@ -1,6 +1,8 @@
 package com.datasampler.datagenerator.service;
 
+import com.datasampler.datagenerator.model.Category;
 import com.datasampler.datagenerator.model.TransactionRecord;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -25,6 +27,19 @@ public class DataGeneratorService {
     // Set to track recently used categories to avoid repetition
     private final Set<String> usedCategories = new HashSet<>();
 
+    @Autowired
+    private CategoryService categoryService;
+
+    /**
+     * Generates a list of random transaction records
+     *
+     * @param dataSampleCount Number of records to generate
+     * @return List of generated transaction records
+     */
+    public List<TransactionRecord> generateTransactionRecords(int dataSampleCount) {
+        return generateTransactionRecords(dataSampleCount, dataSampleCount, null, null);
+    }
+
     /**
      * Generates a list of random transaction records
      *
@@ -33,12 +48,37 @@ public class DataGeneratorService {
      * @return List of generated transaction records
      */
     public List<TransactionRecord> generateTransactionRecords(int dataSampleCount, int uniqueSampleCount) {
+        return generateTransactionRecords(dataSampleCount, uniqueSampleCount, null, null);
+    }
+
+    /**
+     * Generates a list of random transaction records
+     *
+     * @param dataSampleCount Number of records to generate per unique sample
+     * @param uniqueSampleCount Number of unique composite keys to generate
+     * @param txnType Optional transaction type filter (PURCHASE, FEE, PAYMENT, or null for all types)
+     * @return List of generated transaction records
+     */
+    public List<TransactionRecord> generateTransactionRecords(int dataSampleCount, int uniqueSampleCount, String txnType) {
+        return generateTransactionRecords(dataSampleCount, uniqueSampleCount, txnType, null);
+    }
+
+    /**
+     * Generates a list of random transaction records
+     *
+     * @param dataSampleCount Number of records to generate per unique sample
+     * @param uniqueSampleCount Number of unique composite keys to generate
+     * @param txnType Optional transaction type filter (PURCHASE, FEE, PAYMENT, or null for all types)
+     * @param year Optional year for transaction posted dates (e.g., 2024). If provided, dates will be distributed across this year
+     * @return List of generated transaction records
+     */
+    public List<TransactionRecord> generateTransactionRecords(int dataSampleCount, int uniqueSampleCount, String txnType, Integer year) {
         List<TransactionRecord> records = new ArrayList<>();
         Set<String> uniqueKeys = new HashSet<>();
 
         // Generate records with unique composite keys
         while (uniqueKeys.size() < uniqueSampleCount) {
-            TransactionRecord record = generateRandomTransactionRecord();
+            TransactionRecord record = generateRandomTransactionRecord(txnType, year);
 
             // Create a composite key from accountUid, productCd, txnPostedDate, and txnUid
             String compositeKey = record.getAccountUid() + "_" +
@@ -65,13 +105,70 @@ public class DataGeneratorService {
                 // Create a new txnUid
                 int newTxnUid = TXN_UID_GENERATOR.incrementAndGet();
 
-                // Vary the transaction date (within 7 days of the original)
+                // Vary the transaction date
                 LocalDate originalTxnDate = originalRecord.getTxnDate();
-                LocalDate newTxnDate = originalTxnDate.plusDays(RANDOM.nextInt(7) - 3); // -3 to +3 days
+                LocalDate originalPostedDate = originalRecord.getTxnPostedDate();
+                LocalDate newTxnDate;
 
-                // Ensure txnDate is not after txnPostedDate
-                if (newTxnDate.isAfter(originalRecord.getTxnPostedDate())) {
-                    newTxnDate = originalRecord.getTxnPostedDate();
+                // If year parameter is provided or null (which means use current year), ensure the date stays within that year
+                if (year != null || originalRecord.getTxnPostedDate().getYear() == LocalDate.now().getYear()) {
+                    int useYear = (year != null) ? year : LocalDate.now().getYear();
+                    LocalDate today = LocalDate.now();
+
+                    // If using current year, ensure dates are up to yesterday
+                    if (useYear == today.getYear()) {
+                        // Generate a date from January 1st to yesterday
+                        LocalDate startDate = LocalDate.of(useYear, 1, 1);
+                        LocalDate endDate = today.minusDays(1); // Yesterday
+
+                        // Calculate random day between start date and end date
+                        long minDay = startDate.toEpochDay();
+                        long maxDay = endDate.toEpochDay();
+
+                        // If the current date is January 1st, use that date
+                        if (minDay > maxDay) {
+                            originalPostedDate = startDate;
+                        } else {
+                            long randomDay = ThreadLocalRandom.current().nextLong(minDay, maxDay + 1);
+                            originalPostedDate = LocalDate.ofEpochDay(randomDay);
+                        }
+                    } else {
+                        // For past or future years, generate a date distributed across all months
+                        int month = RANDOM.nextInt(12) + 1; // 1-12 for January-December
+                        int maxDaysInMonth = java.time.YearMonth.of(useYear, month).lengthOfMonth();
+                        int day = RANDOM.nextInt(maxDaysInMonth) + 1; // 1 to max days in month
+
+                        // Create new posted date in the specified year
+                        originalPostedDate = LocalDate.of(useYear, month, day);
+                    }
+
+                    // Transaction date is 0-2 days before posted date
+                    // Calculate days to subtract, but ensure we don't cross year boundary
+                    int daysToSubtract = RANDOM.nextInt(3); // 0-2 days before posted date
+
+                    // If subtracting days would cross year boundary, adjust to stay in the same year
+                    if (originalPostedDate.getDayOfYear() <= daysToSubtract) {
+                        daysToSubtract = originalPostedDate.getDayOfYear() - 1;
+                        // If we're at January 1st, don't subtract any days
+                        if (daysToSubtract < 0) {
+                            daysToSubtract = 0;
+                        }
+                    }
+
+                    newTxnDate = originalPostedDate.minusDays(daysToSubtract);
+
+                    // Double-check that transaction date is in the same year as posted date
+                    if (newTxnDate.getYear() != originalPostedDate.getYear()) {
+                        newTxnDate = LocalDate.of(originalPostedDate.getYear(), 1, 1); // Use January 1st of the same year as a fallback
+                    }
+                } else {
+                    // Without year parameter, vary within 7 days of the original
+                    newTxnDate = originalTxnDate.plusDays(RANDOM.nextInt(7) - 3); // -3 to +3 days
+
+                    // Ensure txnDate is not after txnPostedDate
+                    if (newTxnDate.isAfter(originalPostedDate)) {
+                        newTxnDate = originalPostedDate;
+                    }
                 }
 
                 // For related records, either vary the original amount or generate a completely new amount
@@ -88,49 +185,96 @@ public class DataGeneratorService {
                             .setScale(2, BigDecimal.ROUND_HALF_UP);
                 }
 
-                // Randomize category and subcategory based on transaction type
-                String txnType = originalRecord.getTxnType();
+                // Randomize category and subcategory
                 String category;
                 String subCategory;
+                String categoryGUID;
+                String generatedTxnType;
+                String debitCreditIndicator;
 
-                // For PURCHASE transactions, fully randomize categories and subcategories
-                if ("PURCHASE".equals(txnType)) {
+                // If txnType is provided, use it; otherwise, determine based on original or randomly
+                if (txnType != null && !txnType.isEmpty()) {
+                    generatedTxnType = txnType;
+                } else {
+                    // Determine transaction type: PURCHASE (60%), FEE (15%), or PAYMENT (25%)
+                    double randomValue = RANDOM.nextDouble();
+                    boolean originalIsFee = "FEE".equals(originalRecord.getTxnType());
+                    boolean originalIsPayment = "PAYMENT".equals(originalRecord.getTxnType());
+
+                    if (originalIsFee || (!originalIsPayment && randomValue < 0.15)) {
+                        generatedTxnType = "FEE";
+                    } else if (originalIsPayment || randomValue < 0.40) {
+                        generatedTxnType = "PAYMENT";
+                    } else {
+                        generatedTxnType = "PURCHASE";
+                    }
+                }
+
+                // Set category, subcategory, and debitCreditIndicator based on transaction type
+                if ("FEE".equals(generatedTxnType)) {
+                    // For FEE transactions, always use "Fees and Charges"
+                    category = "Fees and Charges";
+                    String feesGUID = categoryService.getCategoryGuidByName("Fees and Charges");
+                    categoryGUID = categoryService.getRandomSubcategoryGuid(feesGUID, RANDOM);
+                    subCategory = categoryService.getCategoryNameByGuid(categoryGUID);
+                    debitCreditIndicator = "D"; // FEE is a Debit
+                } else if ("PAYMENT".equals(generatedTxnType)) {
+                    // For PAYMENT transactions
+                    // Use Uncategorized for PAYMENT transactions
+                    categoryGUID = categoryService.getUncategorizedGuid();
+                    category = "Uncategorized";
+                    subCategory = "Uncategorized";
+                    debitCreditIndicator = "C"; // PAYMENT is a Credit
+                } else {
+                    // For PURCHASE transactions
+                    debitCreditIndicator = "D"; // PURCHASE is a Debit
+
                     // 70% chance to completely change the category
                     if (RANDOM.nextDouble() < 0.7) {
-                        // Generate a completely new random category
-                        category = generateRandomCategory(txnType);
-                        // Generate a matching subcategory
-                        subCategory = generateRandomSubCategory(txnType, category);
+                        // Get a random parent category (excluding "Fees and Charges")
+                        do {
+                            String parentGUID = categoryService.getRandomParentCategoryGuid(RANDOM);
+                            category = categoryService.getCategoryNameByGuid(parentGUID);
+
+                            // Get a random subcategory for this parent
+                            categoryGUID = categoryService.getRandomSubcategoryGuid(parentGUID, RANDOM);
+                            subCategory = categoryService.getCategoryNameByGuid(categoryGUID);
+                        } while ("Fees and Charges".equals(category));
                     } else {
                         // Keep the original category but change subcategory
                         category = originalRecord.getCategory();
-                        subCategory = generateRandomSubCategory(txnType, category);
+
+                        // If original category was "Fees and Charges", change it to something else
+                        if ("Fees and Charges".equals(category)) {
+                            do {
+                                String parentGUID = categoryService.getRandomParentCategoryGuid(RANDOM);
+                                category = categoryService.getCategoryNameByGuid(parentGUID);
+                            } while ("Fees and Charges".equals(category));
+                        }
+
+                        String parentGUID = categoryService.getCategoryGuidByName(category);
+                        categoryGUID = categoryService.getRandomSubcategoryGuid(parentGUID, RANDOM);
+                        subCategory = categoryService.getCategoryNameByGuid(categoryGUID);
                     }
-                } else if ("FEE".equals(txnType)) {
-                    // For FEE transactions, keep the category as "Fees and Charges" but randomize subcategory
-                    category = "Fees and Charges";
-                    subCategory = generateRandomSubCategory(txnType, category);
-                } else {
-                    // Fallback - keep original values
-                    category = originalRecord.getCategory();
-                    subCategory = originalRecord.getSubCategory();
                 }
 
                 TransactionRecord relatedRecord = TransactionRecord.builder()
                     .accountUid(originalRecord.getAccountUid())
                     .productCd(originalRecord.getProductCd())
-                    .txnPostedDate(originalRecord.getTxnPostedDate()) // Keep the same posted date for the primary key
+                    .txnPostedDate(originalPostedDate) // Use the potentially updated posted date
                     .txnDate(newTxnDate) // Varied transaction date
-                    .txnType(txnType)
+                    .txnType(generatedTxnType)
                     .amount(newAmount) // Varied amount
                     .category(category)
                     .subCategory(subCategory) // Potentially varied subcategory
+                    .categoryGUID(categoryGUID)
                     .txnUid(newTxnUid)
                     .tokenizedPan(originalRecord.getTokenizedPan())
                     .last4digitNbr(originalRecord.getLast4digitNbr())
+                    .debitCreditIndicator(debitCreditIndicator) // Set the debit/credit indicator
                     .primaryKey(originalRecord.getAccountUid() + "_" +
                                originalRecord.getProductCd() + "_" +
-                               originalRecord.getTxnPostedDate() + "_" +
+                               originalPostedDate + "_" + // Use the potentially updated posted date
                                newTxnUid) // Create a new primary key with the new txnUid
                     .build();
 
@@ -141,31 +285,94 @@ public class DataGeneratorService {
         return records;
     }
 
-    /**
-     * Generates a list of random transaction records (legacy method for backward compatibility)
-     *
-     * @param count Number of records to generate
-     * @return List of generated transaction records
-     */
-    public List<TransactionRecord> generateTransactionRecords(int count) {
-        return generateTransactionRecords(count, count);
-    }
+    // This method is already defined above
 
     /**
      * Generates a single random transaction record
      *
+     * @param txnType Optional transaction type filter (PURCHASE, FEE, PAYMENT, or null for all types)
+     * @param year Optional year for transaction posted date (e.g., 2024). If provided, date will be within this year
      * @return A randomly generated transaction record
      */
-    private TransactionRecord generateRandomTransactionRecord() {
-        LocalDate postedDate = generateRandomDate();
+    private TransactionRecord generateRandomTransactionRecord(String txnType, Integer year) {
+        LocalDate postedDate = generateRandomDate(year);
+
         // Transaction date is usually on or before the posted date
-        LocalDate txnDate = postedDate.minusDays(RANDOM.nextInt(3)); // 0-2 days before posted date
+        // Calculate days to subtract, but ensure we don't cross year boundary
+        int daysToSubtract = RANDOM.nextInt(3); // 0-2 days before posted date
+
+        // If subtracting days would cross year boundary, adjust to stay in the same year
+        if (postedDate.getDayOfYear() <= daysToSubtract) {
+            daysToSubtract = postedDate.getDayOfYear() - 1;
+            // If we're at January 1st, don't subtract any days
+            if (daysToSubtract < 0) {
+                daysToSubtract = 0;
+            }
+        }
+
+        LocalDate txnDate = postedDate.minusDays(daysToSubtract);
+
+        // Double-check that transaction date is in the same year as posted date
+        if (txnDate.getYear() != postedDate.getYear()) {
+            txnDate = LocalDate.of(postedDate.getYear(), 1, 1); // Use January 1st of the same year as a fallback
+        }
 
         String tokenizedPan = generateRandomTokenizedPan();
 
-        String txnType = generateRandomTxnType();
-        String category = generateRandomCategory(txnType);
-        String subCategory = generateRandomSubCategory(txnType, category);
+        // Get category and subcategory from CategoryService
+        String categoryGUID;
+        String category;
+        String subCategory;
+        String generatedTxnType;
+        String debitCreditIndicator;
+
+        // If txnType is provided, use it; otherwise, determine randomly
+        if (txnType != null && !txnType.isEmpty()) {
+            generatedTxnType = txnType;
+        } else {
+            // Determine transaction type: PURCHASE (70%), FEE (15%), or PAYMENT (15%)
+            double randomValue = RANDOM.nextDouble();
+            if (randomValue < 0.15) {
+                generatedTxnType = "FEE";
+            } else if (randomValue < 0.30) {
+                generatedTxnType = "PAYMENT";
+            } else {
+                generatedTxnType = "PURCHASE";
+            }
+        }
+
+        // Set category, subcategory, and debitCreditIndicator based on transaction type
+        if ("FEE".equals(generatedTxnType)) {
+            // For FEE transactions, always use "Fees and Charges" and txnType = "FEE"
+            String feesGUID = categoryService.getCategoryGuidByName("Fees and Charges");
+            categoryGUID = categoryService.getRandomSubcategoryGuid(feesGUID, RANDOM);
+            category = "Fees and Charges";
+            subCategory = categoryService.getCategoryNameByGuid(categoryGUID);
+            debitCreditIndicator = "D"; // FEE is a Debit
+        } else if ("PAYMENT".equals(generatedTxnType)) {
+            // For PAYMENT transactions
+            // Use Uncategorized for PAYMENT transactions
+            categoryGUID = categoryService.getUncategorizedGuid();
+            category = "Uncategorized";
+            subCategory = "Uncategorized";
+            debitCreditIndicator = "C"; // PAYMENT is a Credit
+        } else {
+            // For PURCHASE transactions
+
+            // Get a random parent category (excluding "Fees and Charges")
+            do {
+                categoryGUID = categoryService.getRandomParentCategoryGuid(RANDOM);
+                category = categoryService.getCategoryNameByGuid(categoryGUID);
+            } while ("Fees and Charges".equals(category));
+
+            // Get a random subcategory for this parent
+            String subCategoryGUID = categoryService.getRandomSubcategoryGuid(categoryGUID, RANDOM);
+            subCategory = categoryService.getCategoryNameByGuid(subCategoryGUID);
+
+            // Update categoryGUID to the subcategory GUID
+            categoryGUID = subCategoryGUID;
+            debitCreditIndicator = "D"; // PURCHASE is a Debit
+        }
 
         String accountUid = generateRandomAccountUid();
         String productCd = generateRandomProductCd();
@@ -179,14 +386,16 @@ public class DataGeneratorService {
                 .productCd(productCd)
                 .txnPostedDate(postedDate)
                 .txnDate(txnDate)
-                .txnType(txnType)
+                .txnType(generatedTxnType)
                 .amount(generateRandomAmount())
                 .category(category)
                 .subCategory(subCategory)
+                .categoryGUID(categoryGUID)
                 .txnUid(txnUid)
                 .tokenizedPan(tokenizedPan)
                 .last4digitNbr(tokenizedPan.substring(tokenizedPan.length() - 4))
                 .primaryKey(primaryKey)
+                .debitCreditIndicator(debitCreditIndicator)
                 .build();
     }
 
@@ -207,22 +416,55 @@ public class DataGeneratorService {
     }
 
     private LocalDate generateRandomDate() {
-        // Calculate date 24 months ago from today
-        LocalDate today = LocalDate.now();
-        LocalDate minDate = today.minusMonths(24);
+        // Always use current year with dates up to yesterday
+        int currentYear = LocalDate.now().getYear();
+        return generateRandomDate(currentYear);
+    }
 
-        long minDay = minDate.toEpochDay();
-        long maxDay = today.toEpochDay();
-        long randomDay = ThreadLocalRandom.current().nextLong(minDay, maxDay);
-        return LocalDate.ofEpochDay(randomDay);
+    private LocalDate generateRandomDate(Integer year) {
+        LocalDate today = LocalDate.now();
+
+        if (year == null) {
+            // Use current year when no year is specified
+            return generateRandomDate(today.getYear());
+        }
+
+        // If the specified year is the current year, ensure dates are up to yesterday
+        if (year == today.getYear()) {
+            // Generate a date from January 1st to yesterday
+            LocalDate startDate = LocalDate.of(year, 1, 1);
+            LocalDate endDate = today.minusDays(1); // Yesterday
+
+            // Calculate random day between start date and end date
+            long minDay = startDate.toEpochDay();
+            long maxDay = endDate.toEpochDay();
+
+            // If the current date is January 1st, use that date
+            if (minDay > maxDay) {
+                return startDate;
+            }
+
+            long randomDay = ThreadLocalRandom.current().nextLong(minDay, maxDay + 1);
+            return LocalDate.ofEpochDay(randomDay);
+        } else {
+            // For past or future years, generate a date distributed across all months
+            int month = RANDOM.nextInt(12) + 1; // 1-12 for January-December
+            int maxDaysInMonth = java.time.YearMonth.of(year, month).lengthOfMonth();
+            int day = RANDOM.nextInt(maxDaysInMonth) + 1; // 1 to max days in month
+
+            return LocalDate.of(year, month, day);
+        }
     }
 
     // LocalTime no longer needed as we're using LocalDate
 
+    // This method is no longer needed as we're determining transaction type based on category
+    /*
     private String generateRandomTxnType() {
         // 80% chance of PURCHASE, 20% chance of FEE
         return RANDOM.nextDouble() < 0.8 ? "PURCHASE" : "FEE";
     }
+    */
 
     private BigDecimal generateRandomAmount() {
         // Generate amount between 1 and 10,000
@@ -230,6 +472,10 @@ public class DataGeneratorService {
         return new BigDecimal(amount).setScale(2, BigDecimal.ROUND_HALF_UP);
     }
 
+    // These methods are no longer needed as we're using CategoryService
+    // Keeping them commented out for reference
+
+    /*
     private String generateRandomCategory(String txnType) {
         if ("PURCHASE".equals(txnType)) {
             // Expanded categories for PURCHASE transactions
@@ -320,6 +566,7 @@ public class DataGeneratorService {
             return feeSubCategories[RANDOM.nextInt(feeSubCategories.length)];
         }
     }
+    */
 
     // No longer needed as we're using TXN_UID_GENERATOR.incrementAndGet()
 
@@ -347,7 +594,7 @@ public class DataGeneratorService {
         StringBuilder csv = new StringBuilder();
 
         // Add header
-        csv.append("primary_key,account_uid,product_cd,txn_posted_date,txn_date,txn_type,amount,category,sub_category,txn_uid,tokenized_pan,last4digitNbr\n");
+        csv.append("primary_key,account_uid,product_cd,txn_posted_date,txn_date,txn_type,amount,category,sub_category,category_guid,debit_credit_indicator,txn_uid,tokenized_pan,last4digitNbr\n");
 
         // Add records
         for (TransactionRecord record : records) {
@@ -360,6 +607,8 @@ public class DataGeneratorService {
                .append(formatCsvValue(record.getAmount().toString())).append(",")
                .append(formatCsvValue(record.getCategory())).append(",")
                .append(formatCsvValue(record.getSubCategory())).append(",")
+               .append(formatCsvValue(record.getCategoryGUID())).append(",")
+               .append(formatCsvValue(record.getDebitCreditIndicator())).append(",")
                .append(formatCsvValue(String.valueOf(record.getTxnUid()))).append(",")
                .append(formatCsvValue(record.getTokenizedPan())).append(",")
                .append(formatCsvValue(record.getLast4digitNbr())).append("\n");

@@ -1,0 +1,392 @@
+[
+  {
+    "categoryGUID": "CAT-00000001",
+    "category": "Shopping",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00000101",
+    "category": "Grocery",
+    "parentCategoryGUID": "CAT-00000001"
+  },
+  {
+    "categoryGUID": "CAT-00000102",
+    "category": "Homegoods",
+    "parentCategoryGUID": "CAT-00000001"
+  },
+  {
+    "categoryGUID": "CAT-00000103",
+    "category": "Clothing",
+    "parentCategoryGUID": "CAT-00000001"
+  },
+  {
+    "categoryGUID": "CAT-00000104",
+    "category": "Electronics & Tech",
+    "parentCategoryGUID": "CAT-00000001"
+  },
+  {
+    "categoryGUID": "CAT-00000002",
+    "category": "Entertainment",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00000201",
+    "category": "Streaming Platforms",
+    "parentCategoryGUID": "CAT-00000002"
+  },
+  {
+    "categoryGUID": "CAT-00000202",
+    "category": "Cinemas",
+    "parentCategoryGUID": "CAT-00000002"
+  },
+  {
+    "categoryGUID": "CAT-00000203",
+    "category": "Games",
+    "parentCategoryGUID": "CAT-00000002"
+  },
+  {
+    "categoryGUID": "CAT-00000204",
+    "category": "Music & Shows",
+    "parentCategoryGUID": "CAT-00000002"
+  },
+  {
+    "categoryGUID": "CAT-00000003",
+    "category": "Travel",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00000301",
+    "category": "Flight Booking",
+    "parentCategoryGUID": "CAT-00000003"
+  },
+  {
+    "categoryGUID": "CAT-00000302",
+    "category": "Hotel and Stay",
+    "parentCategoryGUID": "CAT-00000003"
+  },
+  {
+    "categoryGUID": "CAT-00000303",
+    "category": "Car Rental",
+    "parentCategoryGUID": "CAT-00000003"
+  },
+  {
+    "categoryGUID": "CAT-00000304",
+    "category": "Cab Booking",
+    "parentCategoryGUID": "CAT-00000003"
+  },
+  {
+    "categoryGUID": "CAT-00000004",
+    "category": "Dining",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00000401",
+    "category": "Restaurant",
+    "parentCategoryGUID": "CAT-00000004"
+  },
+  {
+    "categoryGUID": "CAT-00000402",
+    "category": "Fast Food",
+    "parentCategoryGUID": "CAT-00000004"
+  },
+  {
+    "categoryGUID": "CAT-00000403",
+    "category": "Cafe",
+    "parentCategoryGUID": "CAT-00000004"
+  },
+  {
+    "categoryGUID": "CAT-00000404",
+    "category": "Bar & Pub",
+    "parentCategoryGUID": "CAT-00000004"
+  },
+  {
+    "categoryGUID": "CAT-00000005",
+    "category": "Healthcare",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00000501",
+    "category": "Doctor Visit",
+    "parentCategoryGUID": "CAT-00000005"
+  },
+  {
+    "categoryGUID": "CAT-00000502",
+    "category": "Pharmacy",
+    "parentCategoryGUID": "CAT-00000005"
+  },
+  {
+    "categoryGUID": "CAT-00000503",
+    "category": "Hospital",
+    "parentCategoryGUID": "CAT-00000005"
+  },
+  {
+    "categoryGUID": "CAT-00000504",
+    "category": "Dental",
+    "parentCategoryGUID": "CAT-00000005"
+  },
+  {
+    "categoryGUID": "CAT-00000006",
+    "category": "Utilities",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00000601",
+    "category": "Electricity",
+    "parentCategoryGUID": "CAT-00000006"
+  },
+  {
+    "categoryGUID": "CAT-00000602",
+    "category": "Water",
+    "parentCategoryGUID": "CAT-00000006"
+  },
+  {
+    "categoryGUID": "CAT-00000603",
+    "category": "Internet",
+    "parentCategoryGUID": "CAT-00000006"
+  },
+  {
+    "categoryGUID": "CAT-00000604",
+    "category": "Phone",
+    "parentCategoryGUID": "CAT-00000006"
+  },
+  {
+    "categoryGUID": "CAT-00000007",
+    "category": "Automotive",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00000701",
+    "category": "Fuel",
+    "parentCategoryGUID": "CAT-00000007"
+  },
+  {
+    "categoryGUID": "CAT-00000702",
+    "category": "Maintenance",
+    "parentCategoryGUID": "CAT-00000007"
+  },
+  {
+    "categoryGUID": "CAT-00000703",
+    "category": "Purchase",
+    "parentCategoryGUID": "CAT-00000007"
+  },
+  {
+    "categoryGUID": "CAT-00000704",
+    "category": "Auto Insurance",
+    "parentCategoryGUID": "CAT-00000007"
+  },
+  {
+    "categoryGUID": "CAT-00000008",
+    "category": "Education",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00000801",
+    "category": "Tuition",
+    "parentCategoryGUID": "CAT-00000008"
+  },
+  {
+    "categoryGUID": "CAT-00000802",
+    "category": "Books & Supplies",
+    "parentCategoryGUID": "CAT-00000008"
+  },
+  {
+    "categoryGUID": "CAT-00000803",
+    "category": "Online Courses",
+    "parentCategoryGUID": "CAT-00000008"
+  },
+  {
+    "categoryGUID": "CAT-00000804",
+    "category": "Workshops",
+    "parentCategoryGUID": "CAT-00000008"
+  },
+  {
+    "categoryGUID": "CAT-00000009",
+    "category": "Home & Garden",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00000901",
+    "category": "Furniture",
+    "parentCategoryGUID": "CAT-00000009"
+  },
+  {
+    "categoryGUID": "CAT-00000902",
+    "category": "Gardening",
+    "parentCategoryGUID": "CAT-00000009"
+  },
+  {
+    "categoryGUID": "CAT-00000903",
+    "category": "Home Improvement",
+    "parentCategoryGUID": "CAT-00000009"
+  },
+  {
+    "categoryGUID": "CAT-00000904",
+    "category": "Decor & Accessories",
+    "parentCategoryGUID": "CAT-00000009"
+  },
+  {
+    "categoryGUID": "CAT-00000010",
+    "category": "Professional Services",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00001001",
+    "category": "Legal",
+    "parentCategoryGUID": "CAT-00000010"
+  },
+  {
+    "categoryGUID": "CAT-00001002",
+    "category": "Accounting",
+    "parentCategoryGUID": "CAT-00000010"
+  },
+  {
+    "categoryGUID": "CAT-00001003",
+    "category": "Consulting",
+    "parentCategoryGUID": "CAT-00000010"
+  },
+  {
+    "categoryGUID": "CAT-00001004",
+    "category": "Real Estate",
+    "parentCategoryGUID": "CAT-00000010"
+  },
+  {
+    "categoryGUID": "CAT-00000011",
+    "category": "Subscriptions",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00001101",
+    "category": "Streaming",
+    "parentCategoryGUID": "CAT-00000011"
+  },
+  {
+    "categoryGUID": "CAT-00001102",
+    "category": "Software",
+    "parentCategoryGUID": "CAT-00000011"
+  },
+  {
+    "categoryGUID": "CAT-00001103",
+    "category": "Membership",
+    "parentCategoryGUID": "CAT-00000011"
+  },
+  {
+    "categoryGUID": "CAT-00001104",
+    "category": "Box Service",
+    "parentCategoryGUID": "CAT-00000011"
+  },
+  {
+    "categoryGUID": "CAT-00000012",
+    "category": "Charity",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00001201",
+    "category": "Donation",
+    "parentCategoryGUID": "CAT-00000012"
+  },
+  {
+    "categoryGUID": "CAT-00001202",
+    "category": "Fundraiser",
+    "parentCategoryGUID": "CAT-00000012"
+  },
+  {
+    "categoryGUID": "CAT-00001203",
+    "category": "Non-profit",
+    "parentCategoryGUID": "CAT-00000012"
+  },
+  {
+    "categoryGUID": "CAT-00000013",
+    "category": "Government Services",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00001301",
+    "category": "Tax Payment",
+    "parentCategoryGUID": "CAT-00000013"
+  },
+  {
+    "categoryGUID": "CAT-00001302",
+    "category": "State Service Payment",
+    "parentCategoryGUID": "CAT-00000013"
+  },
+  {
+    "categoryGUID": "CAT-00001303",
+    "category": "License & Permits",
+    "parentCategoryGUID": "CAT-00000013"
+  },
+  {
+    "categoryGUID": "CAT-00000014",
+    "category": "Insurance",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00001401",
+    "category": "Health",
+    "parentCategoryGUID": "CAT-00000014"
+  },
+  {
+    "categoryGUID": "CAT-00001402",
+    "category": "Auto",
+    "parentCategoryGUID": "CAT-00000014"
+  },
+  {
+    "categoryGUID": "CAT-00001403",
+    "category": "Home",
+    "parentCategoryGUID": "CAT-00000014"
+  },
+  {
+    "categoryGUID": "CAT-00001404",
+    "category": "Life",
+    "parentCategoryGUID": "CAT-00000014"
+  },
+  {
+    "categoryGUID": "CAT-00000015",
+    "category": "Fees and Charges",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00001501",
+    "category": "Card Payment",
+    "parentCategoryGUID": "CAT-00000015"
+  },
+  {
+    "categoryGUID": "CAT-00001502",
+    "category": "Returns",
+    "parentCategoryGUID": "CAT-00000015"
+  },
+  {
+    "categoryGUID": "CAT-00001503",
+    "category": "Late Payment Fee",
+    "parentCategoryGUID": "CAT-00000015"
+  },
+  {
+    "categoryGUID": "CAT-00001504",
+    "category": "Annual Fee & Charges",
+    "parentCategoryGUID": "CAT-00000015"
+  },
+  {
+    "categoryGUID": "CAT-00000100",
+    "category": "Uncategorized",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00000016",
+    "category": "Payments",
+    "parentCategoryGUID": ""
+  },
+  {
+    "categoryGUID": "CAT-00001601",
+    "category": "Account Payment",
+    "parentCategoryGUID": "CAT-00000016"
+  },
+  {
+    "categoryGUID": "CAT-00001602",
+    "category": "Credit Card Payment",
+    "parentCategoryGUID": "CAT-00000016"
+  },
+  {
+    "categoryGUID": "CAT-00001603",
+    "category": "Loan Payment",
+    "parentCategoryGUID": "CAT-00000016"
+  }
+]

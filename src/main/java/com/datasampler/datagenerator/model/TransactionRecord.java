@@ -22,8 +22,10 @@ public class TransactionRecord {
     private BigDecimal amount;
     private String category;
     private String subCategory;
+    private String categoryGUID;
     private int txnUid;
     private String tokenizedPan;
     private String last4digitNbr;
     private String primaryKey; // Composite key: accountUid_productCd_txnPostedDate_txnUid
+    private String debitCreditIndicator; // D for Debit (PURCHASE, FEE), C for Credit (Payment)
 }

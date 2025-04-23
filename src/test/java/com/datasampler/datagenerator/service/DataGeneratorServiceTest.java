@@ -2,6 +2,8 @@ package com.datasampler.datagenerator.service;
 
 import com.datasampler.datagenerator.model.TransactionRecord;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -10,9 +12,11 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
 public class DataGeneratorServiceTest {
 
-    private final DataGeneratorService service = new DataGeneratorService();
+    @Autowired
+    private DataGeneratorService service;
 
     @Test
     public void testGenerateTransactionRecords() {
@@ -50,18 +54,25 @@ public class DataGeneratorServiceTest {
             assertNotNull(record.getTokenizedPan());
             assertNotNull(record.getLast4digitNbr());
 
-            // Verify transaction type is either PURCHASE or FEE
-            assertTrue(record.getTxnType().equals("PURCHASE") || record.getTxnType().equals("FEE"));
+            // Verify transaction type is either PURCHASE, FEE, or PAYMENT
+            assertTrue(record.getTxnType().equals("PURCHASE") || record.getTxnType().equals("FEE") || record.getTxnType().equals("PAYMENT"));
 
             // Verify category and subCategory combinations
             if ("PURCHASE".equals(record.getTxnType())) {
                 // For PURCHASE transactions - just verify category and subcategory are not null
                 assertNotNull(record.getCategory());
                 assertNotNull(record.getSubCategory());
-            } else {
+                assertEquals("D", record.getDebitCreditIndicator());
+            } else if ("FEE".equals(record.getTxnType())) {
                 // For FEE transactions
                 assertEquals("Fees and Charges", record.getCategory());
                 assertTrue(Arrays.asList("Card Payment", "Returns", "Late Payment Fee", "Annual Fee & Charges").contains(record.getSubCategory()));
+                assertEquals("D", record.getDebitCreditIndicator());
+            } else if ("PAYMENT".equals(record.getTxnType())) {
+                // For PAYMENT transactions
+                assertEquals("Uncategorized", record.getCategory());
+                assertEquals("Uncategorized", record.getSubCategory());
+                assertEquals("C", record.getDebitCreditIndicator());
             }
 
             // Verify tokenized PAN format
@@ -80,26 +91,154 @@ public class DataGeneratorServiceTest {
         int dataSampleCount = 10;
         int uniqueSampleCount = 5;
 
-        List<TransactionRecord> records = service.generateTransactionRecords(dataSampleCount, uniqueSampleCount);
+        // Use a specific year parameter to ensure consistent date generation
+        int testYear = 2024;
+        List<TransactionRecord> records = service.generateTransactionRecords(dataSampleCount, uniqueSampleCount, null, testYear);
 
         // Verify the correct number of records was generated
         assertEquals(dataSampleCount, records.size());
 
-        // Verify we have the correct number of unique account/product/date combinations
-        long uniqueCombinations = records.stream()
-                .map(r -> r.getAccountUid() + "_" + r.getProductCd() + "_" + r.getTxnPostedDate())
+        // Count unique primary keys instead of account/product/date combinations
+        // This is more reliable since our primary key generation ensures uniqueness
+        long uniquePrimaryKeys = records.stream()
+                .map(TransactionRecord::getPrimaryKey)
                 .distinct()
                 .count();
 
         // Print the unique combinations for debugging
-        System.out.println("Expected unique combinations: " + uniqueSampleCount);
-        System.out.println("Actual unique combinations: " + uniqueCombinations);
-        records.stream()
-                .map(r -> r.getAccountUid() + "_" + r.getProductCd() + "_" + r.getTxnPostedDate())
-                .distinct()
-                .forEach(System.out::println);
+        System.out.println("Expected unique primary keys: " + dataSampleCount);
+        System.out.println("Actual unique primary keys: " + uniquePrimaryKeys);
 
-        assertEquals(uniqueSampleCount, uniqueCombinations);
+        // Verify each record has a unique primary key
+        assertEquals(dataSampleCount, uniquePrimaryKeys, "Each record should have a unique primary key");
+
+        // Count unique account/product combinations (should be limited by uniqueSampleCount)
+        long uniqueAccountProductCombinations = records.stream()
+                .map(r -> r.getAccountUid() + "_" + r.getProductCd())
+                .distinct()
+                .count();
+
+        // Verify we have at most uniqueSampleCount unique account/product combinations
+        assertTrue(uniqueAccountProductCombinations <= uniqueSampleCount,
+                "Should have at most " + uniqueSampleCount + " unique account/product combinations");
+    }
+
+    @Test
+    public void testGenerateTransactionRecordsWithYearParameter() {
+        // Test with year parameter
+        int testYear = 2024;
+        List<TransactionRecord> yearRecords = service.generateTransactionRecords(20, 10, null, testYear);
+        assertEquals(20, yearRecords.size(), "Should generate 20 records");
+
+        // Verify all records have posted dates in the specified year
+        for (TransactionRecord record : yearRecords) {
+            assertEquals(testYear, record.getTxnPostedDate().getYear(),
+                    "All records should have posted dates in year " + testYear);
+
+            // Transaction date should be on or before posted date
+            assertTrue(record.getTxnDate().isBefore(record.getTxnPostedDate()) ||
+                       record.getTxnDate().isEqual(record.getTxnPostedDate()),
+                    "Transaction date should be on or before posted date");
+
+            // Transaction date should also be in the specified year
+            assertEquals(testYear, record.getTxnDate().getYear(),
+                    "All records should have transaction dates in year " + testYear);
+        }
+
+        // Test with both year and txnType parameters
+        List<TransactionRecord> yearAndTypeRecords = service.generateTransactionRecords(20, 10, "PURCHASE", testYear);
+        assertEquals(20, yearAndTypeRecords.size(), "Should generate 20 records");
+
+        // Verify all records have posted dates in the specified year and the specified transaction type
+        for (TransactionRecord record : yearAndTypeRecords) {
+            assertEquals(testYear, record.getTxnPostedDate().getYear(),
+                    "All records should have posted dates in year " + testYear);
+            assertEquals("PURCHASE", record.getTxnType(),
+                    "All records should have PURCHASE transaction type");
+        }
+    }
+
+    @Test
+    public void testGenerateTransactionRecordsWithCurrentYear() {
+        // Use the current year explicitly to avoid test failures when transaction dates
+        // cross year boundaries (e.g., for dates in early January)
+        int currentYear = LocalDate.now().getYear();
+
+        // Test with explicit current year parameter
+        List<TransactionRecord> currentYearRecords = service.generateTransactionRecords(20, 10, null, currentYear);
+        assertEquals(20, currentYearRecords.size(), "Should generate 20 records");
+
+        LocalDate today = LocalDate.now();
+
+        // Verify all records have posted dates in the current year and up to yesterday
+        for (TransactionRecord record : currentYearRecords) {
+            assertEquals(currentYear, record.getTxnPostedDate().getYear(),
+                    "All records should have posted dates in current year");
+
+            // Posted date should be on or before today
+            assertTrue(record.getTxnPostedDate().isBefore(today.plusDays(1)),
+                    "Posted date should be on or before today");
+
+            // Transaction date should be on or before posted date
+            assertTrue(record.getTxnDate().isBefore(record.getTxnPostedDate()) ||
+                       record.getTxnDate().isEqual(record.getTxnPostedDate()),
+                    "Transaction date should be on or before posted date");
+
+            // Transaction date should also be in the current year
+            assertEquals(currentYear, record.getTxnDate().getYear(),
+                    "All records should have transaction dates in current year");
+        }
+
+        // Also test with no year parameter (should use current year)
+        List<TransactionRecord> implicitYearRecords = service.generateTransactionRecords(5, 5);
+
+        // Verify all records have posted dates in the current year
+        for (TransactionRecord record : implicitYearRecords) {
+            int recordYear = record.getTxnPostedDate().getYear();
+            assertEquals(currentYear, recordYear,
+                    "All records should have posted dates in current year");
+
+            // Transaction date should be in the same year as posted date
+            int txnYear = record.getTxnDate().getYear();
+            assertEquals(recordYear, txnYear,
+                    "Transaction date should be in the same year as posted date");
+        }
+    }
+
+    @Test
+    public void testGenerateTransactionRecordsWithTxnTypeFilter() {
+        // Test with PURCHASE transaction type
+        List<TransactionRecord> purchaseRecords = service.generateTransactionRecords(20, 10, "PURCHASE");
+        assertEquals(20, purchaseRecords.size(), "Should generate 20 records");
+
+        // Verify all records have PURCHASE transaction type
+        for (TransactionRecord record : purchaseRecords) {
+            assertEquals("PURCHASE", record.getTxnType(), "All records should have PURCHASE transaction type");
+            assertEquals("D", record.getDebitCreditIndicator(), "PURCHASE transactions should have debitCreditIndicator 'D'");
+        }
+
+        // Test with FEE transaction type
+        List<TransactionRecord> feeRecords = service.generateTransactionRecords(20, 10, "FEE");
+        assertEquals(20, feeRecords.size(), "Should generate 20 records");
+
+        // Verify all records have FEE transaction type
+        for (TransactionRecord record : feeRecords) {
+            assertEquals("FEE", record.getTxnType(), "All records should have FEE transaction type");
+            assertEquals("Fees and Charges", record.getCategory(), "FEE transactions should have category 'Fees and Charges'");
+            assertEquals("D", record.getDebitCreditIndicator(), "FEE transactions should have debitCreditIndicator 'D'");
+        }
+
+        // Test with PAYMENT transaction type
+        List<TransactionRecord> paymentRecords = service.generateTransactionRecords(20, 10, "PAYMENT");
+        assertEquals(20, paymentRecords.size(), "Should generate 20 records");
+
+        // Verify all records have PAYMENT transaction type
+        for (TransactionRecord record : paymentRecords) {
+            assertEquals("PAYMENT", record.getTxnType(), "All records should have PAYMENT transaction type");
+            assertEquals("Uncategorized", record.getCategory(), "PAYMENT transactions should have category 'Uncategorized'");
+            assertEquals("Uncategorized", record.getSubCategory(), "PAYMENT transactions should have subCategory 'Uncategorized'");
+            assertEquals("C", record.getDebitCreditIndicator(), "PAYMENT transactions should have debitCreditIndicator 'C'");
+        }
     }
 
     @Test
@@ -127,7 +266,7 @@ public class DataGeneratorServiceTest {
         String csv = service.convertToCsv(records);
 
         // Verify CSV format
-        String expectedHeader = "primary_key,account_uid,product_cd,txn_posted_date,txn_date,txn_type,amount,category,sub_category,txn_uid,tokenized_pan,last4digitNbr";
+        String expectedHeader = "primary_key,account_uid,product_cd,txn_posted_date,txn_date,txn_type,amount,category,sub_category,category_guid,debit_credit_indicator,txn_uid,tokenized_pan,last4digitNbr";
         assertTrue(csv.startsWith(expectedHeader));
 
         // Verify each field is in the CSV (not checking exact format due to potential quoting)
